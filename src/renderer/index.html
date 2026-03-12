@@ -1,0 +1,52 @@
+<!--
+  Copyright 2026 Dennis Michael Heine
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bookmark Viewer SE</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="content-shell">
+        <div class="sticky-header">
+          <section class="controls-panel">
+            <div id="category-bar"></div>
+            <div id="subcategory-bar"></div>
+          </section>
+
+          <section class="status-bar">
+            <div id="warning-banner" class="warning-banner" hidden></div>
+            <div class="inline-controls">
+              <div id="search-controls" class="search-controls-inline"></div>
+              <button id="refresh-button" class="action-button-small" type="button">Aktualisieren</button>
+            </div>
+          </section>
+        </div>
+
+        <section id="cards-grid" class="cards-grid" aria-live="polite"></section>
+        <section id="empty-state" class="empty-state" hidden>
+          <h2>Keine Lesezeichen gefunden</h2>
+          <p>Prüfe die Browser-Auswahl oder passe Suche und Kategorien an.</p>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
