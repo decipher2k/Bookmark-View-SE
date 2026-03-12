@@ -22,7 +22,7 @@ export function renderSearchControls(container, { searchValue, sortValue, onSear
   searchLabel.className = 'search-field';
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
-  searchInput.placeholder = 'Titel, URL oder Beschreibung durchsuchen';
+  searchInput.placeholder = 'Search title, URL, or description';
   searchInput.value = searchValue;
   searchInput.autocomplete = 'off';
   searchInput.addEventListener('input', (event) => onSearch(event.target.value));
@@ -32,7 +32,7 @@ export function renderSearchControls(container, { searchValue, sortValue, onSear
   sortLabel.className = 'sort-field';
   const sortSelect = document.createElement('select');
   const options = [
-    { value: 'date', label: 'Datum' },
+    { value: 'date', label: 'Date' },
     { value: 'name', label: 'Name A-Z' },
     { value: 'domain', label: 'Domain' }
   ];

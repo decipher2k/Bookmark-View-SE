@@ -58,11 +58,11 @@ function buildCategoryModels(bookmarks) {
   }
 
   const categories = [...counts.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0], 'de'))
+    .sort((left, right) => left[0].localeCompare(right[0], 'en'))
     .map(([category, count]) => ({ id: category, label: category, count }));
 
   return [
-    { id: ALL_CATEGORY_ID, label: 'Alle', count: bookmarks.length },
+    { id: ALL_CATEGORY_ID, label: 'All', count: bookmarks.length },
     ...categories
   ];
 }
@@ -85,7 +85,7 @@ function buildSubcategoryModels(bookmarks, activeCategory) {
   }
 
   return [...counts.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0], 'de'))
+    .sort((left, right) => left[0].localeCompare(right[0], 'en'))
     .map(([label, count]) => ({ id: label, label, count }));
 }
 
@@ -94,12 +94,12 @@ function sortBookmarks(bookmarks) {
 
   sorted.sort((left, right) => {
     if (state.sortMode === 'name') {
-      return (left.metadata.title || left.title).localeCompare(right.metadata.title || right.title, 'de');
+      return (left.metadata.title || left.title).localeCompare(right.metadata.title || right.title, 'en');
     }
 
     if (state.sortMode === 'domain') {
-      return left.domain.localeCompare(right.domain, 'de')
-        || (left.metadata.title || left.title).localeCompare(right.metadata.title || right.title, 'de');
+      return left.domain.localeCompare(right.domain, 'en')
+        || (left.metadata.title || left.title).localeCompare(right.metadata.title || right.title, 'en');
     }
 
     return (right.dateAdded || 0) - (left.dateAdded || 0)
@@ -141,7 +141,7 @@ function getVisibleBookmarks() {
       bookmark.domain,
       bookmark.metadata.title,
       bookmark.metadata.description
-    ].join(' ').toLocaleLowerCase('de-DE');
+    ].join(' ').toLocaleLowerCase('en-US');
 
     return haystack.includes(query);
   });
@@ -150,7 +150,7 @@ function getVisibleBookmarks() {
 }
 
 function renderBrowserSelector() {
-  // Browser-Auswahl entfernt – alle verfügbaren Browser werden automatisch importiert
+  // Browser selection removed – all available browsers are imported automatically
 }
 
 function renderWarnings() {
@@ -221,7 +221,7 @@ function renderCategories() {
   if (subcategories.length > 0) {
     renderCategoryBar(
       elements.subcategoryBar,
-      [{ id: '', label: 'Alle Unterordner', count: subcategories.reduce((sum, item) => sum + item.count, 0) }, ...subcategories],
+      [{ id: '', label: 'All Subfolders', count: subcategories.reduce((sum, item) => sum + item.count, 0) }, ...subcategories],
       state.activeSubcategory,
       (subcategoryId) => {
         state.activeSubcategory = subcategoryId;

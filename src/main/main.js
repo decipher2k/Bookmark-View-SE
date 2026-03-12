@@ -231,9 +231,9 @@ async function deleteBookmarkFromBrowsers(url) {
         while (!deleted) {
           const { response } = await dialog.showMessageBox(mainWindow, {
             type: 'warning',
-            title: 'Firefox ist geöffnet',
-            message: 'Firefox sperrt die Lesezeichen-Datenbank.\nBitte schließe Firefox und klicke dann auf „Erneut versuchen".',
-            buttons: ['Erneut versuchen', 'Abbrechen'],
+            title: 'Firefox is open',
+            message: 'Firefox is locking the bookmarks database.\nPlease close Firefox and then click "Try Again".',
+            buttons: ['Try Again', 'Cancel'],
             defaultId: 0,
             cancelId: 1
           });
@@ -266,7 +266,7 @@ function showBookmarkContextMenu(url) {
 
   const template = [
     {
-      label: 'Im Browser öffnen',
+      label: 'Open in Browser',
       enabled: Boolean(safeUrl),
       click: () => {
         if (safeUrl) {
@@ -275,7 +275,7 @@ function showBookmarkContextMenu(url) {
       }
     },
     {
-      label: 'URL kopieren',
+      label: 'Copy URL',
       enabled: Boolean(safeUrl),
       click: () => {
         if (safeUrl) {
@@ -284,7 +284,7 @@ function showBookmarkContextMenu(url) {
       }
     },
     {
-      label: 'Aus Ansicht entfernen',
+      label: 'Hide from View',
       enabled: Boolean(safeUrl),
       click: () => {
         if (safeUrl) {
@@ -297,7 +297,7 @@ function showBookmarkContextMenu(url) {
     },
     { type: 'separator' },
     {
-      label: 'Lesezeichen löschen',
+      label: 'Delete Bookmark',
       enabled: Boolean(safeUrl),
       click: () => {
         if (safeUrl) {

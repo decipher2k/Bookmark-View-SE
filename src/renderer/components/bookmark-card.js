@@ -31,7 +31,7 @@ function createMetaRow(bookmark) {
   }
 
   const domain = document.createElement('span');
-  domain.textContent = bookmark.metadata.domain || bookmark.domain || 'Unbekannt';
+  domain.textContent = bookmark.metadata.domain || bookmark.domain || 'Unknown';
   source.appendChild(domain);
   metaRow.appendChild(source);
 
