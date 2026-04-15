@@ -183,9 +183,255 @@ function deleteChromiumBookmarkByUrl(browserId, url) {
   return found;
 }
 
+/* ── Folder Operations ──────────────────────────────────────────────── */
+
+function findFolderByPath(data, folderPath) {
+  if (!folderPath || folderPath.length === 0) {
+    return null;
+  }
+
+  const rootName = folderPath[0];
+  let current = null;
+
+  for (const root of Object.values(data.roots || {})) {
+    if (root.type === 'folder' && root.name === rootName) {
+      current = root;
+      break;
+    }
+  }
+
+  if (!current) {
+    return null;
+  }
+
+  for (let i = 1; i < folderPath.length; i++) {
+    const child = (current.children || []).find(
+      (c) => c.type === 'folder' && c.name === folderPath[i]
+    );
+    if (!child) {
+      return null;
+    }
+    current = child;
+  }
+
+  return current;
+}
+
+function nextChromiumId(data) {
+  let max = 0;
+
+  function walk(node) {
+    if (!node) {
+      return;
+    }
+    const id = Number.parseInt(node.id, 10);
+    if (!Number.isNaN(id) && id > max) {
+      max = id;
+    }
+    for (const child of node.children || []) {
+      walk(child);
+    }
+  }
+
+  for (const root of Object.values(data.roots || {})) {
+    walk(root);
+  }
+
+  return String(max + 1);
+}
+
+function collectChromiumFolderTree(node, lineage) {
+  if (!node || node.type !== 'folder') {
+    return [];
+  }
+
+  const currentPath = node.name ? [...lineage, node.name] : lineage;
+  const result = [];
+
+  if (node.name) {
+    result.push({ name: node.name, path: currentPath });
+  }
+
+  for (const child of node.children || []) {
+    if (child.type === 'folder') {
+      result.push(...collectChromiumFolderTree(child, currentPath));
+    }
+  }
+
+  return result;
+}
+
+function getChromiumFolderTree(browserId) {
+  const browser = detectChromiumBrowser(browserId);
+  if (!browser.available) {
+    return [];
+  }
+
+  const content = fs.readFileSync(browser.bookmarksPath, 'utf8');
+  const data = JSON.parse(content);
+  const folders = [];
+
+  for (const root of Object.values(data.roots || {})) {
+    folders.push(...collectChromiumFolderTree(root, []));
+  }
+
+  return folders;
+}
+
+function createChromiumFolder(browserId, parentPath, name) {
+  const browser = detectChromiumBrowser(browserId);
+  if (!browser.available) {
+    throw new Error(`Browser ${browserId} is not available`);
+  }
+
+  const sanitizedName = String(name).trim().slice(0, 200);
+  if (!sanitizedName) {
+    throw new Error('Folder name is required');
+  }
+
+  const content = fs.readFileSync(browser.bookmarksPath, 'utf8');
+  const data = JSON.parse(content);
+
+  const parent = findFolderByPath(data, parentPath);
+  if (!parent) {
+    throw new Error('Parent folder not found');
+  }
+
+  if (!parent.children) {
+    parent.children = [];
+  }
+
+  const existing = parent.children.find((c) => c.type === 'folder' && c.name === sanitizedName);
+  if (existing) {
+    throw new Error('A folder with this name already exists');
+  }
+
+  const newFolder = {
+    id: nextChromiumId(data),
+    name: sanitizedName,
+    type: 'folder',
+    children: [],
+    date_added: String(Date.now() * 1000 + 11644473600000000),
+    date_modified: '0'
+  };
+
+  parent.children.push(newFolder);
+  fs.writeFileSync(browser.bookmarksPath, JSON.stringify(data, null, 3), 'utf8');
+
+  return { name: sanitizedName, path: [...parentPath, sanitizedName] };
+}
+
+function renameChromiumFolder(browserId, folderPath, newName) {
+  const browser = detectChromiumBrowser(browserId);
+  if (!browser.available) {
+    throw new Error(`Browser ${browserId} is not available`);
+  }
+
+  const sanitizedName = String(newName).trim().slice(0, 200);
+  if (!sanitizedName) {
+    throw new Error('Folder name is required');
+  }
+
+  const content = fs.readFileSync(browser.bookmarksPath, 'utf8');
+  const data = JSON.parse(content);
+
+  const folder = findFolderByPath(data, folderPath);
+  if (!folder) {
+    throw new Error('Folder not found');
+  }
+
+  folder.name = sanitizedName;
+  fs.writeFileSync(browser.bookmarksPath, JSON.stringify(data, null, 3), 'utf8');
+}
+
+function deleteChromiumFolder(browserId, folderPath) {
+  const browser = detectChromiumBrowser(browserId);
+  if (!browser.available) {
+    throw new Error(`Browser ${browserId} is not available`);
+  }
+
+  if (!folderPath || folderPath.length < 2) {
+    throw new Error('Cannot delete a root folder');
+  }
+
+  const content = fs.readFileSync(browser.bookmarksPath, 'utf8');
+  const data = JSON.parse(content);
+
+  const parentPath = folderPath.slice(0, -1);
+  const targetName = folderPath[folderPath.length - 1];
+  const parent = findFolderByPath(data, parentPath);
+
+  if (!parent || !parent.children) {
+    throw new Error('Parent folder not found');
+  }
+
+  const index = parent.children.findIndex((c) => c.type === 'folder' && c.name === targetName);
+  if (index === -1) {
+    throw new Error('Folder not found');
+  }
+
+  parent.children.splice(index, 1);
+  fs.writeFileSync(browser.bookmarksPath, JSON.stringify(data, null, 3), 'utf8');
+}
+
+function moveChromiumBookmarkToFolder(browserId, url, targetFolderPath) {
+  const browser = detectChromiumBrowser(browserId);
+  if (!browser.available) {
+    throw new Error(`Browser ${browserId} is not available`);
+  }
+
+  const content = fs.readFileSync(browser.bookmarksPath, 'utf8');
+  const data = JSON.parse(content);
+
+  const target = findFolderByPath(data, targetFolderPath);
+  if (!target) {
+    throw new Error('Target folder not found');
+  }
+
+  let movedNode = null;
+
+  function removeFirst(node) {
+    if (!node || !node.children || movedNode) {
+      return;
+    }
+    for (let i = node.children.length - 1; i >= 0; i--) {
+      const child = node.children[i];
+      if (child.type === 'url' && child.url === url && !movedNode) {
+        movedNode = node.children.splice(i, 1)[0];
+        return;
+      }
+      if (child.type === 'folder') {
+        removeFirst(child);
+      }
+    }
+  }
+
+  for (const root of Object.values(data.roots || {})) {
+    removeFirst(root);
+    if (movedNode) {
+      break;
+    }
+  }
+
+  if (!movedNode) {
+    throw new Error('Bookmark not found in this browser');
+  }
+
+  if (!target.children) {
+    target.children = [];
+  }
+  target.children.push(movedNode);
+  fs.writeFileSync(browser.bookmarksPath, JSON.stringify(data, null, 3), 'utf8');
+}
+
 module.exports = {
   CHROMIUM_BROWSERS,
   detectChromiumBrowser,
   parseChromiumBookmarks,
-  deleteChromiumBookmarkByUrl
+  deleteChromiumBookmarkByUrl,
+  getChromiumFolderTree,
+  createChromiumFolder,
+  renameChromiumFolder,
+  deleteChromiumFolder,
+  moveChromiumBookmarkToFolder
 };

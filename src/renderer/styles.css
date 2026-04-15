@@ -575,3 +575,203 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Folder Manager ─────────────────────────────────────────────────── */
+
+.folder-panel {
+  backdrop-filter: blur(22px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+.folder-manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.folder-manager-title {
+  margin: 0;
+  font-family: var(--font-head);
+  font-size: 1.1rem;
+}
+
+.folder-manager-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.folder-browser-section {
+  margin-bottom: 14px;
+}
+
+.folder-browser-section:last-child {
+  margin-bottom: 0;
+}
+
+.folder-browser-label {
+  font-family: var(--font-head);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  margin-bottom: 4px;
+}
+
+.folder-tree,
+.folder-tree-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.folder-tree-children {
+  padding-left: 20px;
+}
+
+.folder-tree-item {
+  margin-bottom: 2px;
+}
+
+.folder-tree-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  transition: background 120ms ease;
+}
+
+.folder-tree-row:hover {
+  background: rgba(13, 115, 215, 0.08);
+}
+
+.folder-tree-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-tree-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.folder-tree-row:hover .folder-tree-actions {
+  opacity: 1;
+}
+
+.folder-action-btn {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--text);
+  padding: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .folder-action-btn {
+    background: rgba(13, 18, 25, 0.6);
+  }
+}
+
+.folder-action-btn:hover {
+  background: rgba(13, 115, 215, 0.15);
+}
+
+.folder-action-btn--danger {
+  color: #c05d1f;
+}
+
+.folder-action-btn--danger:hover {
+  background: rgba(192, 93, 31, 0.15);
+}
+
+/* ── Folder Prompt Dialog ───────────────────────────────────────────── */
+
+.folder-prompt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.4);
+  display: grid;
+  place-items: center;
+}
+
+.folder-prompt-dialog {
+  background: var(--panel-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  min-width: 320px;
+  max-width: 420px;
+  display: grid;
+  gap: 16px;
+}
+
+.folder-prompt-label {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.folder-prompt-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font: inherit;
+  outline: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .folder-prompt-input {
+    background: rgba(13, 18, 25, 0.88);
+  }
+}
+
+.folder-prompt-input:focus {
+  box-shadow: 0 0 0 3px rgba(13, 115, 215, 0.22);
+}
+
+.folder-prompt-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.folder-prompt-ok {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.folder-prompt-ok:hover {
+  background: var(--accent-strong);
+}
+
+.action-button-small.is-active {
+  background: linear-gradient(135deg, rgba(13, 115, 215, 0.16), rgba(255, 150, 87, 0.16));
+  border-color: rgba(13, 115, 215, 0.3);
+}

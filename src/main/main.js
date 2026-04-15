@@ -17,8 +17,8 @@
 const path = require('node:path');
 const { app, BrowserWindow, Menu, clipboard, dialog, ipcMain, shell, nativeTheme } = require('electron');
 
-const { detectChromiumBrowser, parseChromiumBookmarks, deleteChromiumBookmarkByUrl } = require('./bookmarks/chrome');
-const { detectFirefoxBrowser, parseFirefoxBookmarks, deleteFirefoxBookmarkByUrl } = require('./bookmarks/firefox');
+const { detectChromiumBrowser, parseChromiumBookmarks, deleteChromiumBookmarkByUrl, getChromiumFolderTree, createChromiumFolder, renameChromiumFolder, deleteChromiumFolder, moveChromiumBookmarkToFolder } = require('./bookmarks/chrome');
+const { detectFirefoxBrowser, parseFirefoxBookmarks, deleteFirefoxBookmarkByUrl, getFirefoxFolderTree, createFirefoxFolder, renameFirefoxFolder, deleteFirefoxFolder, moveFirefoxBookmarkToFolder } = require('./bookmarks/firefox');
 const { MetadataService, getDomain, normalizeUrl } = require('./metadata');
 
 let store = null;
@@ -115,6 +115,69 @@ function addHiddenUrl(url) {
   store.set('hiddenUrls', [...hidden]);
 }
 
+/* ── Browser Folder Operations ──────────────────────────────────────── */
+
+function getFolderTreeForBrowser(browserId) {
+  if (browserId === 'chrome' || browserId === 'chromium' || browserId === 'edge') {
+    return getChromiumFolderTree(browserId);
+  }
+  if (browserId === 'firefox') {
+    return getFirefoxFolderTree();
+  }
+  return [];
+}
+
+function getAllFolderTrees() {
+  const selectedBrowsers = getSelectedBrowsers();
+  const detected = getDetectedBrowsers();
+  const trees = {};
+
+  for (const browserId of selectedBrowsers) {
+    const browser = detected.find((b) => b.id === browserId);
+    if (!browser || !browser.available) {
+      continue;
+    }
+    try {
+      trees[browserId] = {
+        browserName: browser.name,
+        folders: getFolderTreeForBrowser(browserId)
+      };
+    } catch {
+      trees[browserId] = { browserName: browser.name, folders: [] };
+    }
+  }
+
+  return trees;
+}
+
+function createFolderInBrowser(browserId, parentPath, name) {
+  if (browserId === 'firefox') {
+    return createFirefoxFolder(parentPath, name);
+  }
+  return createChromiumFolder(browserId, parentPath, name);
+}
+
+function renameFolderInBrowser(browserId, folderPath, newName) {
+  if (browserId === 'firefox') {
+    return renameFirefoxFolder(folderPath, newName);
+  }
+  return renameChromiumFolder(browserId, folderPath, newName);
+}
+
+function deleteFolderInBrowser(browserId, folderPath) {
+  if (browserId === 'firefox') {
+    return deleteFirefoxFolder(folderPath);
+  }
+  return deleteChromiumFolder(browserId, folderPath);
+}
+
+function moveBookmarkToFolderInBrowser(browserId, url, targetFolderPath) {
+  if (browserId === 'firefox') {
+    return moveFirefoxBookmarkToFolder(url, targetFolderPath);
+  }
+  return moveChromiumBookmarkToFolder(browserId, url, targetFolderPath);
+}
+
 function getBrowserBookmarks(browserId) {
   if (browserId === 'chrome' || browserId === 'chromium' || browserId === 'edge') {
     return parseChromiumBookmarks(browserId);
@@ -198,6 +261,7 @@ function loadBookmarks(browserIds) {
 
   const mergedBookmarks = mergeBookmarks(rawBookmarks)
     .filter((bookmark) => !hiddenUrls.has(bookmark.url));
+
   const bookmarksWithMetadata = metadataService.mergeBookmarksWithCache(mergedBookmarks);
 
   metadataService.scheduleRefresh(bookmarksWithMetadata, (url, metadata) => {
@@ -211,7 +275,8 @@ function loadBookmarks(browserIds) {
   return {
     bookmarks: bookmarksWithMetadata,
     warnings,
-    selectedBrowsers
+    selectedBrowsers,
+    folderTrees: getAllFolderTrees()
   };
 }
 
@@ -261,8 +326,88 @@ function sanitizeExternalUrl(url) {
   return normalizeUrl(url);
 }
 
+function buildFolderSubmenu(safeUrl) {
+  const trees = getAllFolderTrees();
+  const browserIds = Object.keys(trees);
+
+  if (browserIds.length === 0) {
+    return [];
+  }
+
+  function buildBrowserItems(browserId, folders) {
+    const rootNames = new Set();
+    const foldersByParent = new Map();
+
+    for (const folder of folders) {
+      if (folder.path.length === 1) {
+        rootNames.add(folder.name);
+      }
+      const parentKey = folder.path.slice(0, -1).join('\0');
+      if (!foldersByParent.has(parentKey)) {
+        foldersByParent.set(parentKey, []);
+      }
+      foldersByParent.get(parentKey).push(folder);
+    }
+
+    function buildLevel(parentPath) {
+      const key = parentPath.join('\0');
+      const children = foldersByParent.get(key) || [];
+      return children.map((folder) => {
+        const subKey = folder.path.join('\0');
+        const hasChildren = foldersByParent.has(subKey);
+        if (hasChildren) {
+          return {
+            label: folder.name,
+            type: 'submenu',
+            submenu: [
+              {
+                label: 'Move here',
+                click: () => {
+                  try {
+                    moveBookmarkToFolderInBrowser(browserId, safeUrl, folder.path);
+                  } catch { /* ignore */ }
+                  if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('bookmark:folder-changed', { url: safeUrl });
+                  }
+                }
+              },
+              { type: 'separator' },
+              ...buildLevel(folder.path)
+            ]
+          };
+        }
+        return {
+          label: folder.name,
+          click: () => {
+            try {
+              moveBookmarkToFolderInBrowser(browserId, safeUrl, folder.path);
+            } catch { /* ignore */ }
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('bookmark:folder-changed', { url: safeUrl });
+            }
+          }
+        };
+      });
+    }
+
+    return buildLevel([]);
+  }
+
+  if (browserIds.length === 1) {
+    const browserId = browserIds[0];
+    return buildBrowserItems(browserId, trees[browserId].folders);
+  }
+
+  return browserIds.map((browserId) => ({
+    label: trees[browserId].browserName,
+    type: 'submenu',
+    submenu: buildBrowserItems(browserId, trees[browserId].folders)
+  }));
+}
+
 function showBookmarkContextMenu(url) {
   const safeUrl = sanitizeExternalUrl(url);
+  const folderSubmenu = safeUrl ? buildFolderSubmenu(safeUrl) : [];
 
   const template = [
     {
@@ -295,6 +440,13 @@ function showBookmarkContextMenu(url) {
         }
       }
     },
+    ...(folderSubmenu.length > 0
+      ? [{
+          label: 'Move to Folder',
+          enabled: Boolean(safeUrl),
+          submenu: folderSubmenu
+        }]
+      : []),
     { type: 'separator' },
     {
       label: 'Delete Bookmark',
@@ -339,6 +491,22 @@ function registerIpc() {
 
   ipcMain.handle('bookmark:show-context-menu', (_event, url) => {
     showBookmarkContextMenu(url);
+    return true;
+  });
+
+  ipcMain.handle('folders:list', () => getAllFolderTrees());
+
+  ipcMain.handle('folders:create', (_event, browserId, parentPath, name) => createFolderInBrowser(browserId, parentPath, name));
+
+  ipcMain.handle('folders:rename', (_event, browserId, folderPath, newName) => renameFolderInBrowser(browserId, folderPath, newName));
+
+  ipcMain.handle('folders:delete', (_event, browserId, folderPath) => {
+    deleteFolderInBrowser(browserId, folderPath);
+    return true;
+  });
+
+  ipcMain.handle('folders:move-bookmark', (_event, browserId, url, targetFolderPath) => {
+    moveBookmarkToFolderInBrowser(browserId, url, targetFolderPath);
     return true;
   });
 }

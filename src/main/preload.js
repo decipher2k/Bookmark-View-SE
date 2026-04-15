@@ -40,5 +40,15 @@ contextBridge.exposeInMainWorld('bookmarkNews', {
     const handler = (_event, payload) => listener(payload);
     ipcRenderer.on('bookmark:deleting', handler);
     return () => ipcRenderer.removeListener('bookmark:deleting', handler);
-  }
+  },
+  onBookmarkFolderChanged: (listener) => {
+    const handler = (_event, payload) => listener(payload);
+    ipcRenderer.on('bookmark:folder-changed', handler);
+    return () => ipcRenderer.removeListener('bookmark:folder-changed', handler);
+  },
+  listFolders: () => ipcRenderer.invoke('folders:list'),
+  createFolder: (browserId, parentPath, name) => ipcRenderer.invoke('folders:create', browserId, parentPath, name),
+  renameFolder: (browserId, folderPath, newName) => ipcRenderer.invoke('folders:rename', browserId, folderPath, newName),
+  deleteFolder: (browserId, folderPath) => ipcRenderer.invoke('folders:delete', browserId, folderPath),
+  moveBookmarkToFolder: (browserId, url, targetFolderPath) => ipcRenderer.invoke('folders:move-bookmark', browserId, url, targetFolderPath)
 });

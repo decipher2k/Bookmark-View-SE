@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Electron app that turns browser bookmarks into a news-style reader.",
   "main": "src/main/main.js",
-  "author": "",
+  "author": "Dennis Michael Heine",
   "license": "MIT",
   "engines": {
     "node": ">=20",
@@ -14,6 +14,8 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
+    "make:win": "electron-forge make --platform win32 --arch x64",
+    "make:linux": "electron-forge make --platform linux --arch x64",
     "postinstall": "node scripts/generate-icons.js && electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
     "@electron-forge/maker-rpm": "^7.8.1",
     "@electron-forge/maker-squirrel": "^7.8.1",
     "@electron/rebuild": "^3.7.1",
+    "@reforged/maker-appimage": "^1.2.1",
     "electron": "^35.1.4"
   }
 }

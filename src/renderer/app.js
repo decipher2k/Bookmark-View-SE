@@ -17,6 +17,7 @@
 import { renderCategoryBar } from './components/category-bar.js';
 import { createBookmarkCard } from './components/bookmark-card.js';
 import { renderSearchControls } from './components/search-bar.js';
+import { renderFolderManager, showFolderPrompt, showFolderConfirm } from './components/folder-manager.js';
 
 const ALL_CATEGORY_ID = '__all__';
 
@@ -30,13 +31,17 @@ const state = {
   sortMode: 'date',
   selectedUrl: '',
   warnings: [],
-  loading: true
+  loading: true,
+  folderTrees: {},
+  folderPanelOpen: false
 };
 
 const elements = {
   browserSelector: document.querySelector('#browser-selector'),
   searchControls: document.querySelector('#search-controls'),
   refreshButton: document.querySelector('#refresh-button'),
+  foldersButton: document.querySelector('#folders-button'),
+  folderPanel: document.querySelector('#folder-panel'),
   categoryBar: document.querySelector('#category-bar'),
   subcategoryBar: document.querySelector('#subcategory-bar'),
   cardsGrid: document.querySelector('#cards-grid'),
@@ -256,16 +261,24 @@ async function refreshBookmarks() {
   state.bookmarks = result.bookmarks;
   state.warnings = result.warnings;
   state.selectedBrowsers = result.selectedBrowsers;
+  state.folderTrees = result.folderTrees || {};
   state.loading = false;
 
   renderBrowserSelector();
   renderWarnings();
   renderCategories();
   renderCards();
+  renderFolders();
 }
 
 function bindEvents() {
   elements.refreshButton.addEventListener('click', () => refreshBookmarks());
+
+  elements.foldersButton.addEventListener('click', () => {
+    state.folderPanelOpen = !state.folderPanelOpen;
+    elements.folderPanel.hidden = !state.folderPanelOpen;
+    elements.foldersButton.classList.toggle('is-active', state.folderPanelOpen);
+  });
 
   window.bookmarkNews.onMetadataUpdated(({ url, metadata }) => {
     const bookmark = state.bookmarks.find((entry) => entry.url === url);
@@ -300,6 +313,63 @@ function bindEvents() {
     }
     renderCategories();
     renderCards();
+  });
+
+  window.bookmarkNews.onBookmarkFolderChanged(() => {
+    refreshBookmarks();
+  });
+}
+
+async function handleCreateFolder(browserId, parentPath) {
+  const name = await showFolderPrompt('Folder name:', '');
+  if (!name) {
+    return;
+  }
+  try {
+    await window.bookmarkNews.createFolder(browserId, parentPath, name);
+    state.folderTrees = await window.bookmarkNews.listFolders();
+    renderFolders();
+  } catch (error) {
+    console.error('Failed to create folder:', error);
+  }
+}
+
+async function handleRenameFolder(browserId, folderPath, currentName) {
+  const name = await showFolderPrompt('Rename folder:', currentName);
+  if (!name || name === currentName) {
+    return;
+  }
+  try {
+    await window.bookmarkNews.renameFolder(browserId, folderPath, name);
+    state.folderTrees = await window.bookmarkNews.listFolders();
+    renderFolders();
+  } catch (error) {
+    console.error('Failed to rename folder:', error);
+  }
+}
+
+async function handleDeleteFolder(browserId, folderPath, folderName) {
+  const confirmed = await showFolderConfirm(`Delete folder "${folderName}" and all its subfolders?`);
+  if (!confirmed) {
+    return;
+  }
+  try {
+    await window.bookmarkNews.deleteFolder(browserId, folderPath);
+    state.folderTrees = await window.bookmarkNews.listFolders();
+    renderFolders();
+  } catch (error) {
+    console.error('Failed to delete folder:', error);
+  }
+}
+
+function renderFolders() {
+  if (!elements.folderPanel) {
+    return;
+  }
+  renderFolderManager(elements.folderPanel, state.folderTrees, {
+    onCreate: handleCreateFolder,
+    onRename: handleRenameFolder,
+    onDelete: handleDeleteFolder
   });
 }
 

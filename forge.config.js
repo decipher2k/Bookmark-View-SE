@@ -31,6 +31,15 @@ module.exports = {
       }
     },
     {
+      name: '@reforged/maker-appimage',
+      config: {
+        options: {
+          icon: './assets/icons/app.png',
+          categories: ['Utility', 'Network']
+        }
+      }
+    },
+    {
       name: '@electron-forge/maker-deb',
       config: {
         options: {
