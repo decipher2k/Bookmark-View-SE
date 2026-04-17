@@ -48,15 +48,7 @@ const CHROMIUM_BROWSERS = {
   }
 };
 
-function resolveHomePath(segments) {
-  return path.join(os.homedir(), ...segments);
-}
-
-function getBasePath(platformKey) {
-  if (platformKey === 'win32') {
-    return process.env.LOCALAPPDATA || resolveHomePath(['AppData', 'Local']);
-  }
-
+function getBasePath() {
   return os.homedir();
 }
 
@@ -68,7 +60,7 @@ function getBookmarksPath(browserId) {
   }
 
   const platformKey = process.platform === 'win32' ? 'win32' : process.platform === 'darwin' ? 'darwin' : 'linux';
-  return path.join(getBasePath(platformKey), ...browser.profilePath[platformKey]);
+  return path.join(getBasePath(), ...browser.profilePath[platformKey]);
 }
 
 function detectChromiumBrowser(browserId) {
@@ -311,7 +303,7 @@ function createChromiumFolder(browserId, parentPath, name) {
     name: sanitizedName,
     type: 'folder',
     children: [],
-    date_added: String(Date.now() * 1000 + 11644473600000000),
+    date_added: String(BigInt(Date.now()) * 1000n + 11644473600000000n),
     date_modified: '0'
   };
 

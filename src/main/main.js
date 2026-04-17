@@ -178,6 +178,36 @@ function moveBookmarkToFolderInBrowser(browserId, url, targetFolderPath) {
   return moveChromiumBookmarkToFolder(browserId, url, targetFolderPath);
 }
 
+async function retryOnFirefoxLock(browserId, operation) {
+  try {
+    return operation();
+  } catch (error) {
+    if (browserId !== 'firefox' || !error.message?.includes('database is locked')) {
+      throw error;
+    }
+    while (true) {
+      const { response } = await dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        title: 'Firefox is open',
+        message: 'Firefox is locking the bookmarks database.\nPlease close Firefox and then click "Try Again".',
+        buttons: ['Try Again', 'Cancel'],
+        defaultId: 0,
+        cancelId: 1
+      });
+      if (response !== 0) {
+        throw new Error('Operation cancelled – Firefox database is locked');
+      }
+      try {
+        return operation();
+      } catch (retryError) {
+        if (!retryError.message?.includes('database is locked')) {
+          throw retryError;
+        }
+      }
+    }
+  }
+}
+
 function getBrowserBookmarks(browserId) {
   if (browserId === 'chrome' || browserId === 'chromium' || browserId === 'edge') {
     return parseChromiumBookmarks(browserId);
@@ -496,12 +526,16 @@ function registerIpc() {
 
   ipcMain.handle('folders:list', () => getAllFolderTrees());
 
-  ipcMain.handle('folders:create', (_event, browserId, parentPath, name) => createFolderInBrowser(browserId, parentPath, name));
+  ipcMain.handle('folders:create', async (_event, browserId, parentPath, name) => {
+    return retryOnFirefoxLock(browserId, () => createFolderInBrowser(browserId, parentPath, name));
+  });
 
-  ipcMain.handle('folders:rename', (_event, browserId, folderPath, newName) => renameFolderInBrowser(browserId, folderPath, newName));
+  ipcMain.handle('folders:rename', async (_event, browserId, folderPath, newName) => {
+    return retryOnFirefoxLock(browserId, () => renameFolderInBrowser(browserId, folderPath, newName));
+  });
 
-  ipcMain.handle('folders:delete', (_event, browserId, folderPath) => {
-    deleteFolderInBrowser(browserId, folderPath);
+  ipcMain.handle('folders:delete', async (_event, browserId, folderPath) => {
+    await retryOnFirefoxLock(browserId, () => deleteFolderInBrowser(browserId, folderPath));
     return true;
   });
 

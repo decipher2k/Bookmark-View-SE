@@ -331,6 +331,7 @@ async function handleCreateFolder(browserId, parentPath) {
     renderFolders();
   } catch (error) {
     console.error('Failed to create folder:', error);
+    await showFolderConfirm(`Failed to create folder: ${error.message || error}\n\nMake sure the browser is closed before modifying its bookmarks.`);
   }
 }
 
@@ -345,6 +346,7 @@ async function handleRenameFolder(browserId, folderPath, currentName) {
     renderFolders();
   } catch (error) {
     console.error('Failed to rename folder:', error);
+    await showFolderConfirm(`Failed to rename folder: ${error.message || error}\n\nMake sure the browser is closed before modifying its bookmarks.`);
   }
 }
 
@@ -359,6 +361,7 @@ async function handleDeleteFolder(browserId, folderPath, folderName) {
     renderFolders();
   } catch (error) {
     console.error('Failed to delete folder:', error);
+    await showFolderConfirm(`Failed to delete folder: ${error.message || error}\n\nMake sure the browser is closed before modifying its bookmarks.`);
   }
 }
 
